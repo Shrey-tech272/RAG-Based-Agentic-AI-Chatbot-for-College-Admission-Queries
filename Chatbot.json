@@ -1,0 +1,346 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "70f6f5da-5de9-4b0e-bfa0-7680d53c48dc",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -48,
+        752
+      ],
+      "webhookId": "rag-chatbot-webhook-001"
+    },
+    {
+      "parameters": {
+        "query": "={{ $json.chatInput }}",
+        "options": {
+          "systemPromptTemplate": "You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question.\nIf you don't know the answer, just say that you don't know, don't try to make up an answer.\n----------------\nContext: {context}"
+        }
+      },
+      "id": "e46dee1f-e42c-4497-948e-d45950f16fdc",
+      "name": "Question and Answer Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+      "typeVersion": 1,
+      "position": [
+        208,
+        752
+      ],
+      "notes": "Part I Core: Retrieves top-5 chunks from Pinecone, feeds them with the question to Groq LLM."
+    },
+    {
+      "parameters": {
+        "topK": 12
+      },
+      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+      "typeVersion": 1,
+      "position": [
+        304,
+        976
+      ],
+      "id": "cccb1cc8-8e62-4b4c-bce1-d3d203d1746e",
+      "name": "Vector Store Retriever"
+    },
+    {
+      "parameters": {
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "rag-pdf-index",
+          "mode": "list",
+          "cachedResultName": "rag-pdf-index"
+        },
+        "options": {
+          "pineconeNamespace": "pdf-docs"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        304,
+        1184
+      ],
+      "id": "993b5de3-ad56-49dc-a979-d7fa5635888d",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "iAyH3gutn00nHfs6",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        384,
+        1392
+      ],
+      "id": "b18261ab-8fab-41fa-988d-00686bff3ad2",
+      "name": "Embeddings Ollama3",
+      "credentials": {
+        "ollamaApi": {
+          "id": "wda9DW17FthMmZpo",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "7e6a8eab-e70a-4ae0-aa19-19408f3920ff",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "/home/node/.n8n-files/SIU SCRI Ph D Rules Book 2025.pdf"
+      },
+      "id": "4caa044e-42d5-4b4a-a3c6-4d0fed69f3ce",
+      "name": "Read Binary File",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        176,
+        0
+      ],
+      "notes": "Reads the raw PDF as binary. Path already set to your PDF location."
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "rag-pdf-index",
+          "mode": "list",
+          "cachedResultName": "rag-pdf-index"
+        },
+        "options": {
+          "pineconeNamespace": "pdf-docs"
+        }
+      },
+      "id": "5c384ffc-41f9-48f2-8b6b-4133767ed8b3",
+      "name": "Pinecone Vector Store — Insert",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1,
+      "position": [
+        432,
+        -208
+      ],
+      "credentials": {
+        "pineconeApi": {
+          "id": "iAyH3gutn00nHfs6",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "loader": "pdfLoader",
+        "options": {}
+      },
+      "id": "a63bd036-6a37-4ac3-9dde-6b3a413f11b3",
+      "name": "Default Data Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        528,
+        16
+      ],
+      "notes": "Type: Binary, Format: PDF. Feeds raw PDF into text splitter."
+    },
+    {
+      "parameters": {
+        "chunkSize": 500,
+        "chunkOverlap": 50,
+        "options": {}
+      },
+      "id": "3b5edb92-0efc-40ba-b8b0-c8b01ccb84f4",
+      "name": "Recursive Character Text Splitter",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        608,
+        224
+      ],
+      "notes": "Splits PDF text into 500-char chunks with 50-char overlap."
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "id": "58f60105-cbda-4735-8e85-d0913de84ef8",
+      "name": "Embeddings Ollama",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        400,
+        16
+      ],
+      "credentials": {
+        "ollamaApi": {
+          "id": "wda9DW17FthMmZpo",
+          "name": "Ollama account"
+        }
+      },
+      "notes": "Local Ollama embeddings. 768 dimensions. Docker-compatible URL."
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        176,
+        976
+      ],
+      "id": "0d8590e2-107a-420f-b980-a26f4a75d8da",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "wda9DW17FthMmZpo",
+          "name": "Ollama account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Question and Answer Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store Retriever": {
+      "ai_retriever": [
+        [
+          {
+            "node": "Question and Answer Chain",
+            "type": "ai_retriever",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Vector Store Retriever",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama3": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Binary File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Binary File": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store — Insert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Pinecone Vector Store — Insert",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store — Insert",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Question and Answer Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "074b78a3-b1a6-441f-89f1-ebd520cd74e7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9970c81cd6da3314adbdf4b7c3919a3362687e0336b211a812c80a0021bd4074"
+  },
+  "id": "pkau1e148C4KOGHW",
+  "tags": []
+}
